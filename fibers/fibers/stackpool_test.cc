@@ -18,6 +18,13 @@
 // loom/fibers/fibers/stackpool_test.cc
 // -----------------------------------------------------------------------------
 //
+// Tests for StackPool to ensure that a pool:
+//
+// A) Can be allocated
+// B) Can lease and release stacks
+// C) Leases out stacks in a FIFO pattern
+// D) Holds up to multithreaded use.
+//
 
 #include "fibers/stackpool.h"
 
