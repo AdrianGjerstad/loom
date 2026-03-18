@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Copyright 2026 Adrian Gjerstad.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ------------------------------------------------------------------------------
+# loom/.gitignore
+# ------------------------------------------------------------------------------
+#
+# This global configuration file ignores a series of common types of files, all
+# grouped into subsections (bookmarked by {{{ and }}})
+#
+
+# Editor Temporary Files {{{
+
+# Vim {{{
+# Excerpts of Vim.gitignore on GitHub
+
+# Swap
+[._]*.s[a-v][a-z]
+# comment out the next line if you don't need vector files
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+# }}}
+
+# }}}
+
+# Build System Files (Artifacts) {{{
+
+# Bazel {{{
+# Excerpts of Bazel.gitignore on GitHub
+
+# gitignore template for Bazel build system
+# website: https://bazel.build/
+
+# Ignore all bazel-* symlinks. There is no full list since this can change
+# based on the name of the directory bazel is cloned into.
+bazel-*
+
+# Directories for the Bazel IntelliJ plugin containing the generated
+# IntelliJ project files and plugin configuration. Separate directories are
+# for the IntelliJ, Android Studio and CLion versions of the plugin.
+.ijwb/
+.aswb/
+.clwb/
+
+# ADDITION: Ignore MODULE.bazel.lock, as the file is generated automatically by
+# Bazel.
+MODULE.bazel.lock
+
+# }}}
+
+# }}}
+
+# vim: foldmethod=marker
+
