@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackpool.cc
+// loom/fibers/stackpool.cc
 // -----------------------------------------------------------------------------
 //
 // Cross-platform components of a StackPool.

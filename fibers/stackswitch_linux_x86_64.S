@@ -16,7 +16,7 @@
  */
 
 /* -----------------------------------------------------------------------------
- * loom/fibers/fibers/stackswitch_linux_x86_64.S
+ * loom/fibers/stackswitch_linux_x86_64.S
  * -----------------------------------------------------------------------------
  *
  * Fast stack-switching implementation for x86_64 systems running Linux (SysV/

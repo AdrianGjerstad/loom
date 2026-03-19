@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackswitch_test.cc
+// loom/fibers/stackswitch_test.cc
 // -----------------------------------------------------------------------------
 //
 // Tests for loom::ConfigureStack and loom::SwitchStack to ensure that support

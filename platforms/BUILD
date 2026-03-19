@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # -----------------------------------------------------------------------------
-# loom/fibers/platforms/BUILD
+# loom/platforms/BUILD
 # -----------------------------------------------------------------------------
 #
 # A Bazel configuration file containing joint architecture+OS constraints for
