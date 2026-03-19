@@ -30,6 +30,9 @@
 .type loom__switch_to_stack,@function
 .align 16
 
+/* Used as a trampoline to prevent jumping to unspecified memory. (SEE #3) */
+.extern abort
+
 .text
 
 /* In order of lower memory to higher memory (last pushed to first pushed, first
@@ -65,6 +68,10 @@ loom__configure_stack:
   leaq -1(%rdi,%rsi), %rax
   andq $~0xF, %rax  /* Align to 16 bytes per ABI */
 
+  /* Insert trampoline return address */
+  leaq trampoline(%rip), %r8
+  movq %r8, (%rax)
+
   /* Total memory used to save this initial state: 64 bytes (0x40) */
   subq $0x40, %rax
 
@@ -75,6 +82,15 @@ loom__configure_stack:
   /* return stack pointer as rax */
   popq %rbp
   ret
+
+trampoline:
+  /* This code runs if the entry point of a fiber returns for some reason. The
+   * current stack is the fiber that has had an underrun. The stack is in the
+   * middle of a 16-byte alignment, leaving room for %rbp to be pushed.
+   */
+
+  /* See issue #3 on GitHub. For now we'll just abort. */
+  jmp abort
 
 /* loom__switch_to_stack() - see stackswitch.h
  * %rdi - destination_sp
