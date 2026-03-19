@@ -24,7 +24,8 @@
 // A) Works
 // B) Can properly preserve registers
 // C) Allows fibers to switch between each other
-// D) Works to migrate fibers from one thread to another.
+// D) Works to migrate fibers from one thread to another
+// E) Aborts when an entry point returns (see #3).
 //
 // This test statically allocates its stacks to make it separate from StackPool.
 //
@@ -35,6 +36,7 @@
 #include <thread>
 
 #include <gtest/gtest.h>
+#include <gtest/gtest-death-test.h>
 
 namespace loom {
 
@@ -58,6 +60,8 @@ class StackSwitchTest : public ::testing::Test {
   uint8_t fiber_a_stack[kStackSize];
   uint8_t fiber_b_stack[kStackSize];
 };
+
+using StackSwitchDeathTest = StackSwitchTest;
 
 TEST_F(StackSwitchTest, ConfiguresAndSwitchesSuccessfully) {
   FiberContext ctx;
@@ -202,6 +206,22 @@ TEST_F(StackSwitchTest, MigratesThreadsSuccessfully) {
 
   // Fiber has switched back the second time.
   ASSERT_EQ(ctx.shared_int, 3);
+}
+
+TEST_F(StackSwitchDeathTest, EntryPointReturns) {
+  auto EntryPointAbort = [](void* arg) {
+    // This fiber returns from the entry point to test what happens when
+    // execution falls off the end of an entry point.
+  };
+
+  EXPECT_EXIT({
+    FiberContext ctx;
+
+    ctx.fiber_a_sp = loom::ConfigureStack(fiber_a_stack, kStackSize,
+                                          EntryPointAbort, &ctx);
+
+    loom::SwitchStack(ctx.fiber_a_sp, &ctx.main_sp);
+  }, testing::KilledBySignal(SIGABRT), ".*");
 }
 
 }
