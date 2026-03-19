@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackpool_linux.cc
+// loom/fibers/stackpool_linux.cc
 // -----------------------------------------------------------------------------
 //
 // Implements the Linux-specific functionality for loom::StackPool.

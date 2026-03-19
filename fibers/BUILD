@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # -----------------------------------------------------------------------------
-# loom/fibers/fibers/BUILD
+# loom/fibers/BUILD
 # -----------------------------------------------------------------------------
 #
 # Bazel build declarations for fiber runtime code.

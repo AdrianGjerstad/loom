@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackpool_test.cc
+// loom/fibers/stackpool_test.cc
 // -----------------------------------------------------------------------------
 //
 // Tests for StackPool to ensure that a pool:

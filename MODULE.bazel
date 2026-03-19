@@ -15,13 +15,13 @@
 # limitations under the License.
 
 # -----------------------------------------------------------------------------
-# loom/fibers/MODULE.bazel
+# loom/MODULE.bazel
 # -----------------------------------------------------------------------------
 #
-# Bzlmod declarations for the fibers project within Loom.
+# Bzlmod declarations for the monorepo Loom.
 
 module(
-    name = "fibers",
+    name = "loom",
     version = "0.0.1",
 )
 

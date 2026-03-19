@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackpool.h
+// loom/fibers/stackpool.h
 // -----------------------------------------------------------------------------
 //
 // Fibers require stacks to run on, and in a performance-minded fiber

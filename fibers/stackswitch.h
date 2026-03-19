@@ -15,7 +15,7 @@
 // limitations under the License.
 
 // -----------------------------------------------------------------------------
-// loom/fibers/fibers/stackswitch.h
+// loom/fibers/stackswitch.h
 // -----------------------------------------------------------------------------
 //
 // Fibers are just like threads. They require a stack to be able to store
