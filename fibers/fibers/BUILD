@@ -36,7 +36,16 @@ cc_library(
     ],
     linkopts = ["-latomic"],
     copts = ["-mcx16"],
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "stackswitch",
+    srcs = select({
+        "//platforms:linux_x86_64": ["stackswitch_linux_x86_64.S"],
+    }),
+    hdrs = ["stackswitch.h"],
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
