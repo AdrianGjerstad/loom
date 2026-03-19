@@ -60,3 +60,12 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "stackswitch_test",
+    srcs = ["stackswitch_test.cc"],
+    deps = [
+        ":stackswitch",
+        "@googletest//:gtest",
+    ],
+)
+
