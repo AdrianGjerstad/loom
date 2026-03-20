@@ -33,6 +33,8 @@
 #ifndef LOOM_FIBERS_FIBERS_STACKSWITCH_H_
 #define LOOM_FIBERS_FIBERS_STACKSWITCH_H_
 
+#include <cstdlib>
+
 #include <stdint.h>
 
 extern "C" {
@@ -127,14 +129,14 @@ inline void SwitchStack(void* new_sp, void** old_sp) {
 class SIMDGuard {
  public:
   // Saves the current SIMD state
-  SIMDGuard() : simd_buffer_(new uint8_t[kSIMDBufferSize]) {
+  SIMDGuard() : simd_buffer_(std::aligned_alloc(64, kSIMDBufferSize)) {
     loom__save_simd_state(simd_buffer_);
   }
 
   // Restores the saved SIMD state
   ~SIMDGuard() {
     loom__restore_simd_state(simd_buffer_);
-    delete[] simd_buffer_;
+    std::free(simd_buffer_);
   }
 
   // Not copyable
@@ -142,7 +144,7 @@ class SIMDGuard {
   SIMDGuard& operator=(const SIMDGuard& other) = delete;
 
  private:
-  uint8_t* simd_buffer_;
+  void* simd_buffer_;
 };
 
 }
