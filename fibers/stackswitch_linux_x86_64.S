@@ -28,6 +28,12 @@
 .type loom__configure_stack,@function
 .globl loom__switch_to_stack
 .type loom__switch_to_stack,@function
+.globl loom__discover_simd_buffer_size
+.type loom__discover_simd_buffer_size,@function
+.globl loom__save_simd_state
+.type loom__save_simd_state,@function
+.globl loom__restore_simd_state
+.type loom__restore_simd_state,@function
 .align 16
 
 /* Used as a trampoline to prevent jumping to unspecified memory. (SEE #3) */
@@ -121,5 +127,56 @@ loom__switch_to_stack:
   popq %rbp
 
   /* Drop into new fiber by popping rip (ret) */
+  ret
+
+/* loom__discover_simd_buffer_size() - see stackswitch.h
+ */
+loom__discover_simd_buffer_size:
+  push %rbp
+  mov %rsp, %rbp
+
+  /* RBX gets clobbered, so we have to save it */
+  push %rbx
+
+  xor %rax, %rax
+
+  mov $0xD, %eax  /* CPUID leaf 0xD is for Processor Extended State */
+  mov $0, %ecx    /* Sub-leaf 0 */
+  cpuid
+  mov %ebx, %eax  /* Result was in EBX/ECX */
+
+  pop %rbx
+
+  pop %rbp
+  ret
+
+/* loom__save_simd_state() - see stackswitch.h
+ *
+ * %rdi - state
+ */
+loom__save_simd_state:
+  push %rbp
+  mov %rsp, %rbp
+
+  mov $0xFFFFFFFF, %eax  /* Enable all flags (we want to save all state) */
+  mov $0xFFFFFFFF, %edx
+  xsave (%rdi)
+
+  pop %rbp
+  ret
+
+/* loom__restore_simd_state() - see stackswitch.h
+ *
+ * %rdi - state
+ */
+loom__restore_simd_state:
+  push %rbp
+  mov %rsp, %rbp
+
+  mov $0xFFFFFFFF, %eax  /* Enable all flags (we want to restore all state) */
+  mov $0xFFFFFFFF, %edx
+  xrstor (%rdi)
+
+  pop %rbp
   ret
 

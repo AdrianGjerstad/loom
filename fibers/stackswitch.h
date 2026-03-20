@@ -33,6 +33,8 @@
 #ifndef LOOM_FIBERS_FIBERS_STACKSWITCH_H_
 #define LOOM_FIBERS_FIBERS_STACKSWITCH_H_
 
+#include <cstdlib>
+
 #include <stdint.h>
 
 extern "C" {
@@ -74,9 +76,22 @@ void* loom__configure_stack(void* stack_base, uintptr_t stack_size,
 //   // Would not continue until other fiber switches back to this stack.
 void loom__switch_to_stack(void* destination_sp, void** save_sp);
 
+// Discovers the exact SIMD buffer size necessary to save all SIMD state.
+uintptr_t loom__discover_simd_buffer_size(void);
+
+// Saves the system dependent SIMD state in the given buffer. The buffer must be
+// the exact size returned by loom__discover_simd_buffer_size().
+void loom__save_simd_state(void* state);
+
+// Restores the system dependent SIMD state in the given buffer. The buffer must
+// be the exact size returned by loom__discover_simd_buffer_size().
+void loom__restore_simd_state(void* state);
+
 }  // extern "C"
 
 namespace loom {
+
+const uintptr_t kSIMDBufferSize = loom__discover_simd_buffer_size();
 
 // Performs the exact same duties as loom__configure_stack, but is wrapped in
 // C++-familiar usage.
@@ -91,6 +106,46 @@ inline void* ConfigureStack(void* stack_base, uintptr_t stack_size,
 inline void SwitchStack(void* new_sp, void** old_sp) {
   loom__switch_to_stack(new_sp, old_sp);
 }
+
+// loom::SIMDGuard
+//
+// Acts as an RAII interface for saving SIMD data (like x86_64's XMM registers)
+// across stack switches. SIMD data is not saved by default because it is too
+// expensive to do so for 99% of use cases.
+//
+// Example:
+//
+// void Foo() {
+//   // Do some work
+//
+//   {
+//     loom::SIMDGuard guard;
+//
+//     Yield();
+//   }
+//
+//   // Continue SIMD work
+// }
+class SIMDGuard {
+ public:
+  // Saves the current SIMD state
+  SIMDGuard() : simd_buffer_(std::aligned_alloc(64, kSIMDBufferSize)) {
+    loom__save_simd_state(simd_buffer_);
+  }
+
+  // Restores the saved SIMD state
+  ~SIMDGuard() {
+    loom__restore_simd_state(simd_buffer_);
+    std::free(simd_buffer_);
+  }
+
+  // Not copyable
+  SIMDGuard(const SIMDGuard& other) = delete;
+  SIMDGuard& operator=(const SIMDGuard& other) = delete;
+
+ private:
+  void* simd_buffer_;
+};
 
 }
 

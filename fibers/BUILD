@@ -62,7 +62,11 @@ cc_test(
 
 cc_test(
     name = "stackswitch_test",
-    srcs = ["stackswitch_test.cc"],
+    srcs = [
+        "stackswitch_test.cc",
+    ] + select({
+        "//platforms:linux_x86_64": ["stackswitch_linux_x86_64_test.S"],
+    }),
     deps = [
         ":stackswitch",
         "@googletest//:gtest",

@@ -25,7 +25,8 @@
 // B) Can properly preserve registers
 // C) Allows fibers to switch between each other
 // D) Works to migrate fibers from one thread to another
-// E) Aborts when an entry point returns (see #3).
+// E) Aborts when an entry point returns (see #3)
+// F) Includes SIMD saving when necessary.
 //
 // This test statically allocates its stacks to make it separate from StackPool.
 //
@@ -37,6 +38,15 @@
 
 #include <gtest/gtest.h>
 #include <gtest/gtest-death-test.h>
+
+extern "C" {
+
+// SIMD functions that are implemented in assembly allow us to test the
+// SIMD-specific registers that aren't normally saved.
+extern void write_simd(uintptr_t value);  // Writes a value to a SIMD register.
+extern uintptr_t read_simd(void);  // Reads a value from a SIMD register.
+
+}
 
 namespace loom {
 
@@ -222,6 +232,39 @@ TEST_F(StackSwitchDeathTest, EntryPointReturns) {
 
     loom::SwitchStack(ctx.fiber_a_sp, &ctx.main_sp);
   }, testing::KilledBySignal(SIGABRT), ".*");
+}
+
+TEST_F(StackSwitchTest, PreservesSIMDData) {
+  FiberContext ctx;
+  
+  auto SIMDEntry = [](void* arg) {
+    auto* ctx = static_cast<FiberContext*>(arg);
+
+    // Write SIMD data and the yield. SIMDGuard should protect the data.
+    write_simd(42);
+
+    {
+      loom::SIMDGuard guard;
+      loom::SwitchStack(ctx->main_sp, &ctx->fiber_a_sp);
+    }
+
+    // The SIMD data should be restored and can be read from the main stack.
+    loom::SwitchStack(ctx->main_sp, &ctx->fiber_a_sp);
+  };
+
+  ctx.fiber_a_sp = loom::ConfigureStack(fiber_a_stack, kStackSize, SIMDEntry,
+                                        &ctx);
+
+  loom::SwitchStack(ctx.fiber_a_sp, &ctx.main_sp);
+
+  ASSERT_EQ(read_simd(), 42u);
+  write_simd(143);  // Clobber the old data
+  ASSERT_EQ(read_simd(), 143u);
+
+  loom::SwitchStack(ctx.fiber_a_sp, &ctx.main_sp);
+
+  // Verify that the data was restored.
+  ASSERT_EQ(read_simd(), 42u);
 }
 
 }
