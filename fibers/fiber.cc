@@ -26,6 +26,8 @@
 #include "fibers/stackarena.h"
 #include "fibers/stackswitch.h"
 
+#include <iostream>
+
 namespace loom {
 
 namespace {
@@ -39,12 +41,12 @@ Fiber::~Fiber() {
     return;
   }
 
-  state_ = Fiber::State::kDead;
+  arena_ = nullptr;
   stack_ = nullptr;
+  state_ = Fiber::State::kDead;
   task_ = nullptr;
   sp_ = nullptr;
   yield_sp_ = nullptr;
-  arena_->Release(stack_);
 }
 
 void Fiber::Reap(Fiber* fiber) {
@@ -54,7 +56,14 @@ void Fiber::Reap(Fiber* fiber) {
     return;
   }
 
+  auto* arena = fiber->arena_;
+  auto* stack = fiber->stack_;
+
+  std::cerr << "vptr for fiber = " << *(void**)fiber << std::endl;
+
   fiber->~Fiber();
+  
+  arena->Release(stack);
 }
 
 Fiber* Fiber::GetCurrentFiber() {
@@ -85,8 +94,8 @@ void Fiber::YieldBack() {
 
 Fiber::Fiber(StackArena* arena, void* stack) : arena_(arena), stack_(stack),
     state_(Fiber::State::kSuspended) {
-  sp_ = loom::ConfigureStack(stack_, arena_->stack_size(), Fiber::EntryPoint,
-                             this);
+  sp_ = loom::ConfigureStack(stack_, arena_->stack_size() - sizeof(Fiber),
+                             Fiber::EntryPoint, this);
   yield_sp_ = nullptr;
 }
 

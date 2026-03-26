@@ -82,7 +82,7 @@ class Fiber {
          - sizeof(Fiber)) & ~(0xF));
     Fiber* fiber = new(fiber_ptr) Fiber(arena, stack);
 
-    fiber->task_ = [f = std::forward(entry),
+    fiber->task_ = [f = std::forward<F>(entry),
                     tup = std::make_tuple(std::forward<Args>(args)...)]()
                       mutable {
       std::apply(f, tup);
@@ -96,14 +96,13 @@ class Fiber {
   // this function is equivalent to use-after-free.
   static void Reap(Fiber* fiber);
 
-  // Obtains the pointer to the currently running Fiber. Undefined behavior if
-  // this function is called outside of a Fiber.
+  // Obtains the pointer to the currently running Fiber. Returns nullptr if
+  // called outside of a fiber.
   static Fiber* GetCurrentFiber();
 
   // Suspends execution of the currently-executing thread/fiber and jumps into
   // this fiber for execution. Execution returns to the caller once the fiber
-  // yields. MUST NOT be called from within this fiber, but can be called from
-  // within other fibers.
+  // yields. MUST NOT be called from within a fiber.
   virtual void Jump();
 
   // Yields execution of the current Fiber, back to whoever called into it last

@@ -59,6 +59,19 @@ cc_library(
 )
 
 cc_test(
+    name = "fiber_test",
+    srcs = ["fiber_test.cc"],
+    deps = [
+        ":fiber",
+        ":stackarena",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/status:status_matchers",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_test(
     name = "stackarena_test",
     srcs = ["stackarena_test.cc"],
     deps = [
