@@ -152,6 +152,8 @@ void StackArena::Release(void* stack_base) {
                                                   std::memory_order_acquire));
 }
 
+StackArena::StackArena(size_t stack_size) : stack_size_(stack_size) {}
+
 absl::Status StackArena::CreateNewChunk() {
   absl::MutexLock lock(chunk_mutex_);
 

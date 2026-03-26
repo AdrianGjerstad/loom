@@ -65,6 +65,18 @@ cc_library(
 )
 
 cc_test(
+    name = "stackarena_test",
+    srcs = ["stackarena_test.cc"],
+    deps = [
+        ":stackarena",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/status:status_matchers",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_test(
     name = "stackpool_test",
     srcs = ["stackpool_test.cc"],
     deps = [
