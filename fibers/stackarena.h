@@ -19,7 +19,7 @@
 // -----------------------------------------------------------------------------
 //
 // Fibers require stacks to run on, and in a performance-minded fiber
-// implementation, stacks are expensive to allocate. A stack pool provides a
+// implementation, stacks are expensive to allocate. A stack arena provides a
 // single, massive, pre-allocated space in memory from which smaller stacks may
 // be leased.
 //

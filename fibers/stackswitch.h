@@ -45,14 +45,14 @@ extern "C" {
 // pointer valid as the first argument to loom__switch_to_stack.
 //
 // For example:
-//   auto stack_or = pool.Lease();
+//   auto stack_or = arena.Lease();
 //   if (!stack_or.ok()) {
 //     // Failure logic
 //   }
 //   void* stack = stack_or.value();
 //
 //   // Configure stack
-//   void* sp = loom::ConfigreStack(stack, pool.stack_size(), FiberMain, NULL);
+//   void* sp = loom::ConfigreStack(stack, arena.stack_size(), FiberMain, NULL);
 //
 //   // Start fiber
 //   loom::SwitchStack(sp, &this_sp);

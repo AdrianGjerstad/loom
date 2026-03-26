@@ -28,7 +28,8 @@
 // E) Aborts when an entry point returns (see #3)
 // F) Includes SIMD saving when necessary.
 //
-// This test statically allocates its stacks to make it separate from StackPool.
+// This test statically allocates its stacks to make it separate from
+// StackArena.
 //
 
 #include "fibers/stackswitch.h"

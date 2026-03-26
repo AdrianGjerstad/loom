@@ -39,23 +39,6 @@ cc_library(
 )
 
 cc_library(
-    name = "stackpool",
-    srcs = [
-        "stackpool.cc",
-    ] + select({
-        "@platforms//os:linux": ["stackpool_linux.cc"],
-    }),
-    hdrs = ["stackpool.h"],
-    deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-    ],
-    linkopts = ["-latomic"],
-    copts = ["-mcx16"],
-    visibility = ["//visibility:public"],
-)
-
-cc_library(
     name = "stackswitch",
     srcs = select({
         "//platforms:linux_x86_64": ["stackswitch_linux_x86_64.S"],
@@ -69,18 +52,6 @@ cc_test(
     srcs = ["stackarena_test.cc"],
     deps = [
         ":stackarena",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/status:status_matchers",
-        "@googletest//:gtest",
-    ],
-)
-
-cc_test(
-    name = "stackpool_test",
-    srcs = ["stackpool_test.cc"],
-    deps = [
-        ":stackpool",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/status:status_matchers",
