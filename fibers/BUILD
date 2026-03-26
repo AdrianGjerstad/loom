@@ -23,6 +23,17 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
+    name = "fiber",
+    srcs = ["fiber.cc"],
+    hdrs = ["fiber.h"],
+    deps = [
+        ":stackarena",
+        ":stackswitch",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "stackarena",
     srcs = select({
         "//platforms:linux_x86_64": ["stackarena_linux_x86_64.cc"],
