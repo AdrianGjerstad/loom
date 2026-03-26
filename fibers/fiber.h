@@ -27,6 +27,7 @@
 
 #include <utility>
 
+#include "fibers/schedulable.h"
 #include "fibers/stackarena.h"
 
 namespace loom {
@@ -36,7 +37,7 @@ namespace loom {
 // A single unit of execution within Loom, cooperatively scheduled with many
 // thousands of other fibers at any given time. These are good to use for any
 // tasks that are primarily I/O bound, such as socket handling.
-class Fiber {
+class Fiber : public Schedulable {
  public:
   // Copying is not allowed. We want to avoid having a fiber running twice
   // simultaneously on the same stack.
@@ -48,16 +49,7 @@ class Fiber {
   Fiber(Fiber&& other) = delete;
   Fiber& operator=(Fiber&& other) = delete;
 
-  // A list of different states that a Fiber can be in.
-  enum class State {
-    kUnknown = 0,
-    kRunning,  // Fiber is actively running
-    kSuspended,  // Fiber is not actively running but can be ;)
-    kDead,  // Fiber has no more code to execute
-  };
-
-  // Virtual to allow for mocks and fakes.
-  virtual ~Fiber();
+  ~Fiber();
 
   // Creates a new loom::Fiber, getting a stack from the given StackArena and
   // configuring it so that it is ready to run. Takes a variadic argument list
@@ -103,17 +95,17 @@ class Fiber {
   // Suspends execution of the currently-executing thread/fiber and jumps into
   // this fiber for execution. Execution returns to the caller once the fiber
   // yields. MUST NOT be called from within a fiber.
-  virtual void Jump();
+  void Step() override;
 
   // Yields execution of the current Fiber, back to whoever called into it last
-  // via Jump(). MUST ONLY be called from within this fiber.
+  // via Step(). MUST ONLY be called from within this fiber.
   //
   // The proper call to this function within a fiber looks like this:
   // loom::Fiber::GetCurrentFiber()->YieldBack();
   virtual void YieldBack();
 
   // Gets the current state of the fiber
-  State state() const { return state_; }
+  State state() const override { return state_; }
 
  private:
   // Initializes a Fiber and configures the given stack for that fiber's needs.

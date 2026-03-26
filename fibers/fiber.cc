@@ -23,6 +23,7 @@
 
 #include "fibers/fiber.h"
 
+#include "fibers/schedulable.h"
 #include "fibers/stackarena.h"
 #include "fibers/stackswitch.h"
 
@@ -66,7 +67,7 @@ Fiber* Fiber::GetCurrentFiber() {
   return current_fiber;
 }
 
-void Fiber::Jump() {
+void Fiber::Step() {
   // Configure this thread's environment for running this fiber
   current_fiber = this;
   state_ = Fiber::State::kRunning;

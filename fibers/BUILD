@@ -27,9 +27,16 @@ cc_library(
     srcs = ["fiber.cc"],
     hdrs = ["fiber.h"],
     deps = [
+        ":schedulable",
         ":stackarena",
         ":stackswitch",
     ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "schedulable",
+    hdrs = ["schedulable.h"],
     visibility = ["//visibility:public"],
 )
 
@@ -63,6 +70,7 @@ cc_test(
     srcs = ["fiber_test.cc"],
     deps = [
         ":fiber",
+        ":schedulable",
         ":stackarena",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",

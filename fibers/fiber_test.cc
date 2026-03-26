@@ -117,7 +117,7 @@ TEST_F(FiberTest, PerfectlyForwardsVariadicArguments) {
   Fiber* fiber = fiber_or.value();
 
   // Allow the fiber to run.
-  fiber->Jump();
+  fiber->Step();
 
   // Confirm that the variadic arguments were passed successfully.
   EXPECT_TRUE(executed);
@@ -146,13 +146,13 @@ TEST_F(FiberTest, AccuratelyTracksStateOverLifecycle) {
   // Should be suspended at creation
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
   
-  fiber->Jump();
+  fiber->Step();
 
   // Should be back to suspended
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
 
   // Jump back in one time to finish the fiber
-  fiber->Jump();
+  fiber->Step();
 
   // Confirm that the fiber was marked as dead.
   EXPECT_EQ(fiber->state(), Fiber::State::kDead);
@@ -183,14 +183,14 @@ TEST_F(FiberTest, GetCurrentFiberReturnsTheCorrectPointer) {
   EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
 
   // Make sure fiber_a is reading the current fiber correctly.
-  fiber_a->Jump();
+  fiber_a->Step();
   EXPECT_EQ(captured_ptr, fiber_a);
 
   // Should now be nullptr again
   EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
 
   // Same check for fiber_b
-  fiber_b->Jump();
+  fiber_b->Step();
   EXPECT_EQ(captured_ptr, fiber_b);
 
   // One last time should be nullptr
