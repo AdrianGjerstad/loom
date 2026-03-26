@@ -23,6 +23,17 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
+    name = "fiber",
+    srcs = ["fiber.cc"],
+    hdrs = ["fiber.h"],
+    deps = [
+        ":stackarena",
+        ":stackswitch",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "stackarena",
     srcs = select({
         "//platforms:linux_x86_64": ["stackarena_linux_x86_64.cc"],
@@ -45,6 +56,19 @@ cc_library(
     }),
     hdrs = ["stackswitch.h"],
     visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "fiber_test",
+    srcs = ["fiber_test.cc"],
+    deps = [
+        ":fiber",
+        ":stackarena",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/status:status_matchers",
+        "@googletest//:gtest",
+    ],
 )
 
 cc_test(
