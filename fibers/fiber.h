@@ -113,6 +113,9 @@ class Fiber {
   // loom::Fiber::GetCurrentFiber()->YieldBack();
   virtual void YieldBack();
 
+  // Gets the current state of the fiber
+  State state() const { return state_; }
+
  private:
   // Initializes a Fiber and configures the given stack for that fiber's needs.
   Fiber(StackArena* arena, void* stack);
