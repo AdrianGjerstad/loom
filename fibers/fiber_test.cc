@@ -94,7 +94,7 @@ TEST_F(FiberTest, CreatesSuccessfullyAndHasSuspendedState) {
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
 
   // Cleanup
-  Fiber::Reap(fiber);
+  fiber->~Fiber();
 }
 
 // A Fiber must be able to accept an entry point function with any number of
@@ -128,7 +128,7 @@ TEST_F(FiberTest, PerfectlyForwardsVariadicArguments) {
   EXPECT_EQ(fiber->state(), Fiber::State::kDead);
 
   // Cleanup
-  Fiber::Reap(fiber);
+  fiber->~Fiber();
 }
 
 // A Fiber must accurately track its execution state at any given time.
@@ -158,7 +158,7 @@ TEST_F(FiberTest, AccuratelyTracksStateOverLifecycle) {
   EXPECT_EQ(fiber->state(), Fiber::State::kDead);
 
   // Cleanup
-  Fiber::Reap(fiber);
+  fiber->~Fiber();
 }
 
 // GetCurrentFiber() should always return an accurate pointer to the currently
@@ -197,8 +197,8 @@ TEST_F(FiberTest, GetCurrentFiberReturnsTheCorrectPointer) {
   EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
 
   // Cleanup
-  Fiber::Reap(fiber_a);
-  Fiber::Reap(fiber_b);
+  fiber_a->~Fiber();
+  fiber_b->~Fiber();
 }
 
 }

@@ -40,25 +40,15 @@ Fiber::~Fiber() {
     return;
   }
 
+  auto* arena = arena_;
+  auto* stack = stack_;
+
   arena_ = nullptr;
   stack_ = nullptr;
   state_ = Fiber::State::kDead;
   task_ = nullptr;
   sp_ = nullptr;
   yield_sp_ = nullptr;
-}
-
-void Fiber::Reap(Fiber* fiber) {
-  if (fiber->state_ != Fiber::State::kSuspended &&
-      fiber->state_ != Fiber::State::kDead) {
-    // Do not reap a fiber that is already running.
-    return;
-  }
-
-  auto* arena = fiber->arena_;
-  auto* stack = fiber->stack_;
-
-  fiber->~Fiber();
   
   arena->Release(stack);
 }

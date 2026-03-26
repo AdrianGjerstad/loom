@@ -54,7 +54,7 @@ class Fiber : public Schedulable {
   // Creates a new loom::Fiber, getting a stack from the given StackArena and
   // configuring it so that it is ready to run. Takes a variadic argument list
   // for ease of use. Fiber is allocated on the stack itself, so you must
-  // remember to `Reap()` it.
+  // remember to call the destructor on it.
   //
   // Fails if the stack could not be allocated.
   template <typename F, typename... Args>
@@ -82,11 +82,6 @@ class Fiber : public Schedulable {
 
     return fiber;
   }
-
-  // Cleans up a finished loom::Fiber. Destructor is not called automatically
-  // because of where the Fiber is allocated. Use of the fiber after a call to
-  // this function is equivalent to use-after-free.
-  static void Reap(Fiber* fiber);
 
   // Obtains the pointer to the currently running Fiber. Returns nullptr if
   // called outside of a fiber.
