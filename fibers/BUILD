@@ -23,16 +23,15 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
-    name = "stackpool",
-    srcs = [
-        "stackpool.cc",
-    ] + select({
-        "@platforms//os:linux": ["stackpool_linux.cc"],
+    name = "stackarena",
+    srcs = select({
+        "//platforms:linux_x86_64": ["stackarena_linux_x86_64.cc"],
     }),
-    hdrs = ["stackpool.h"],
+    hdrs = ["stackarena.h"],
     deps = [
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/synchronization",
     ],
     linkopts = ["-latomic"],
     copts = ["-mcx16"],
@@ -49,10 +48,10 @@ cc_library(
 )
 
 cc_test(
-    name = "stackpool_test",
-    srcs = ["stackpool_test.cc"],
+    name = "stackarena_test",
+    srcs = ["stackarena_test.cc"],
     deps = [
-        ":stackpool",
+        ":stackarena",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/status:status_matchers",
