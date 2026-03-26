@@ -32,8 +32,6 @@
 #include "fibers/fiber.h"
 #include "fibers/stackarena.h"
 
-#include <iostream>
-
 namespace loom {
 
 namespace {

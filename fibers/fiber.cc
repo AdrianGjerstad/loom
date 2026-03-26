@@ -26,8 +26,6 @@
 #include "fibers/stackarena.h"
 #include "fibers/stackswitch.h"
 
-#include <iostream>
-
 namespace loom {
 
 namespace {
@@ -58,8 +56,6 @@ void Fiber::Reap(Fiber* fiber) {
 
   auto* arena = fiber->arena_;
   auto* stack = fiber->stack_;
-
-  std::cerr << "vptr for fiber = " << *(void**)fiber << std::endl;
 
   fiber->~Fiber();
   
