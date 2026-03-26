@@ -23,6 +23,22 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
+    name = "stackarena",
+    srcs = select({
+        "//platforms:linux_x86_64": ["stackarena_linux_x86_64.cc"],
+    }),
+    hdrs = ["stackarena.h"],
+    deps = [
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/synchronization",
+    ],
+    linkopts = ["-latomic"],
+    copts = ["-mcx16"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "stackpool",
     srcs = [
         "stackpool.cc",
