@@ -25,6 +25,7 @@
 #ifndef LOOM_FIBERS_FIBER_H_
 #define LOOM_FIBERS_FIBER_H_
 
+#include <memory>
 #include <utility>
 
 #include "fibers/schedulable.h"
@@ -44,35 +45,26 @@ class Fiber : public Schedulable {
   Fiber(const Fiber& other) = delete;
   Fiber& operator=(const Fiber& other) = delete;
 
-  // Not moveable. Fibers must only be allocated at the top of the stack they
-  // control.
-  Fiber(Fiber&& other) = delete;
-  Fiber& operator=(Fiber&& other) = delete;
-
   ~Fiber();
 
   // Creates a new loom::Fiber, getting a stack from the given StackArena and
   // configuring it so that it is ready to run. Takes a variadic argument list
-  // for ease of use. Fiber is allocated on the stack itself, so you must
-  // remember to call the destructor on it.
+  // for ease of use.
   //
   // Fails if the stack could not be allocated.
   template <typename F, typename... Args>
-  static absl::StatusOr<Fiber*> Create(StackArena* arena, F&& entry,
-      Args&&... args) {
+  static absl::StatusOr<std::unique_ptr<Fiber>> Create(StackArena* arena,
+      F&& entry, Args&&... args) {
     // Allocate a stack
     auto stack_or = arena->Lease();
     if (!stack_or.ok()) {
       return stack_or.status();
     }
 
-    // Place the Fiber object itself at the top of the stack.
     void* stack = stack_or.value();
 
-    void* fiber_ptr = reinterpret_cast<void*>(
-        (reinterpret_cast<uintptr_t>(stack) + arena->stack_size()
-         - sizeof(Fiber)) & ~(0xF));
-    Fiber* fiber = new(fiber_ptr) Fiber(arena, stack);
+    // Allocate the fiber in a unique_ptr
+    auto fiber = std::unique_ptr<Fiber>(new Fiber(arena, stack));
 
     fiber->task_ = [f = std::forward<F>(entry),
                     tup = std::make_tuple(std::forward<Args>(args)...)]()
@@ -83,27 +75,16 @@ class Fiber : public Schedulable {
     return fiber;
   }
 
-  // Obtains the pointer to the currently running Fiber. Returns nullptr if
-  // called outside of a fiber.
-  static Fiber* GetCurrentFiber();
+  void** Suspend() override;
 
-  // Suspends execution of the currently-executing thread/fiber and jumps into
-  // this fiber for execution. Execution returns to the caller once the fiber
-  // yields. MUST NOT be called from within a fiber.
-  void Step() override;
+  void ContinueFrom(Schedulable* current) override;
 
-  // Yields execution of the current Fiber, back to whoever called into it last
-  // via Step(). MUST ONLY be called from within this fiber.
-  //
-  // The proper call to this function within a fiber looks like this:
-  // loom::Fiber::GetCurrentFiber()->YieldBack();
-  virtual void YieldBack();
-
-  // Gets the current state of the fiber
   State state() const override { return state_; }
 
  private:
   // Initializes a Fiber and configures the given stack for that fiber's needs.
+  // Takes ownership of the stack it is given, calling arena->Release() is done
+  // in the destructor.
   Fiber(StackArena* arena, void* stack);
 
   // The entry point that is actually provided to loom::ConfigureStack
@@ -113,11 +94,8 @@ class Fiber : public Schedulable {
   void* stack_;
   std::function<void()> task_;
 
-  // Stack pointers. sp_ is the stack pointer of this fiber after a yield.
-  // yield_sp_ is the stack pointer in the stack that we need to jump back into
-  // upon this fiber yielding.
+  // Stack pointer. sp_ is the stack pointer of this fiber after a yield.
   void* sp_;
-  void* yield_sp_;
 
   State state_;
 };

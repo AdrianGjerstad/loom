@@ -23,17 +23,13 @@
 
 #include "fibers/fiber.h"
 
+#include <memory>
+
 #include "fibers/schedulable.h"
 #include "fibers/stackarena.h"
 #include "fibers/stackswitch.h"
 
 namespace loom {
-
-namespace {
-
-thread_local Fiber* current_fiber = nullptr;
-
-}
 
 Fiber::~Fiber() {
   if (arena_ == nullptr) {
@@ -48,42 +44,31 @@ Fiber::~Fiber() {
   state_ = Fiber::State::kDead;
   task_ = nullptr;
   sp_ = nullptr;
-  yield_sp_ = nullptr;
   
   arena->Release(stack);
 }
 
-Fiber* Fiber::GetCurrentFiber() {
-  return current_fiber;
-}
-
-void Fiber::Step() {
-  // Configure this thread's environment for running this fiber
-  current_fiber = this;
-  state_ = Fiber::State::kRunning;
-
-  // Perform the context switch
-  loom::SwitchStack(sp_, &yield_sp_);
-
-  // Fiber has yielded back, reset the environment
+void** Fiber::Suspend() {
   if (state_ == Fiber::State::kRunning) {
-    // We only want to update this state if the fiber still has work to do. If
-    // the fiber returns, state will already be marked kDead by the time we get
-    // here.
     state_ = Fiber::State::kSuspended;
   }
-  current_fiber = nullptr;
+
+  return &sp_;
 }
 
-void Fiber::YieldBack() {
-  loom::SwitchStack(yield_sp_, &sp_);
+void Fiber::ContinueFrom(Schedulable* current) {
+  // Suspend the current schedulable and get its old_sp pointer.
+  void** old_sp = current->Suspend();
+
+  // Mark this fiber as running and run it.
+  state_ = Fiber::State::kRunning;
+  loom::SwitchStack(sp_, old_sp);
 }
 
 Fiber::Fiber(StackArena* arena, void* stack) : arena_(arena), stack_(stack),
     state_(Fiber::State::kSuspended) {
-  sp_ = loom::ConfigureStack(stack_, arena_->stack_size() - sizeof(Fiber),
-                             Fiber::EntryPoint, this);
-  yield_sp_ = nullptr;
+  sp_ = loom::ConfigureStack(stack_, arena_->stack_size(), Fiber::EntryPoint,
+                             this);
 }
 
 void Fiber::EntryPoint(void* fiber_ptr) {
@@ -95,7 +80,7 @@ void Fiber::EntryPoint(void* fiber_ptr) {
   // Prevent returning from this function at all costs.
   while (true) {
     fiber->state_ = Fiber::State::kDead;
-    fiber->YieldBack();
+    loom::this_fiber::yield();
   }
 }
 

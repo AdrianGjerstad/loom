@@ -30,7 +30,9 @@
 #include <gtest/gtest.h>
 
 #include "fibers/fiber.h"
+#include "fibers/schedulable.h"
 #include "fibers/stackarena.h"
+#include "fibers/stackswitch.h"
 
 namespace loom {
 
@@ -68,14 +70,65 @@ class FakeStackArena : public StackArena {
   int outstanding_stacks_ = 0;
 };
 
+// A fake schedulable that just refers to the main stack of execution.
+class MainSchedulable : public Schedulable {
+ public:
+  void** Suspend() override {
+    state_ = State::kSuspended;
+    return &main_sp_;
+  }
+
+  void ContinueFrom(Schedulable* current) override {
+    void** old_sp = current->Suspend();
+
+    state_ = State::kRunning;
+    loom::SwitchStack(main_sp_, old_sp);
+  }
+
+  State state() const { return state_; }
+
+ private:
+  void* main_sp_;
+  State state_ = State::kRunning;
+};
+
 class FiberTest : public ::testing::Test {
  protected:
+  void SetUp() override {
+    // Configure the "dispatch strategy" (return to the "main" stack)
+    loom::this_fiber::pick_new_schedulable_and_swap = [&]() {
+      *fiber_restore_ = std::move(loom::this_fiber::current_schedulable);
+
+      loom::this_fiber::current_schedulable = std::move(main_sch_);
+      return fiber_restore_->get();
+    };
+
+    loom::this_fiber::current_schedulable = std::move(main_sch_);
+  }
+
+  // Performs the effect of a dispatcher selecting the given fiber to run next
+  // on the thread, dispatching it, and dropping back out to the main thread for
+  // asserts after the fact (courtesy of SetUp() configuring
+  // pick_new_schedulable_and_swap).
+  void DispatchFiber(std::unique_ptr<Schedulable>* fiber) {
+    fiber_restore_ = fiber;
+    main_sch_ = std::move(loom::this_fiber::current_schedulable);
+    loom::this_fiber::current_schedulable = std::move(*fiber);
+    loom::this_fiber::current_schedulable->ContinueFrom(main_sch_.get());
+
+    // Because fiber_restore_ was set correctly, fiber should still reference
+    // not only a valid fiber, but specifically the exact fiber that was passed
+    // in.
+  }
+
   void TearDown() override {
     // Catch memory leaks.
     // IF YOUR TEST FAILED AT THIS ASSERT, NOT ALL STACKS ARE BEING RELEASED.
     ASSERT_EQ(arena_.outstanding_stacks(), 0);
   }
 
+  std::unique_ptr<Schedulable>* fiber_restore_ = nullptr;
+  std::unique_ptr<Schedulable> main_sch_ = std::make_unique<MainSchedulable>();
   FakeStackArena arena_ = FakeStackArena(64 * 1024);
 };
 
@@ -84,7 +137,7 @@ class FiberTest : public ::testing::Test {
 TEST_F(FiberTest, CreatesSuccessfullyAndHasSuspendedState) {
   auto fiber_or = Fiber::Create(&arena_, []() {});
   ASSERT_THAT(fiber_or, IsOk());
-  Fiber* fiber = fiber_or.value();
+  std::unique_ptr<Fiber> fiber = std::move(fiber_or).value();
 
   // There should be one stack allocated
   EXPECT_EQ(arena_.outstanding_stacks(), 1);
@@ -92,9 +145,6 @@ TEST_F(FiberTest, CreatesSuccessfullyAndHasSuspendedState) {
   // Fiber should have state "kSuspended" when it is first created and is not
   // being executed.
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
-
-  // Cleanup
-  fiber->~Fiber();
 }
 
 // A Fiber must be able to accept an entry point function with any number of
@@ -114,10 +164,10 @@ TEST_F(FiberTest, PerfectlyForwardsVariadicArguments) {
 
   auto fiber_or = Fiber::Create(&arena_, entry, 42, "Fibers are awesome!");
   ASSERT_THAT(fiber_or, IsOk());
-  Fiber* fiber = fiber_or.value();
+  std::unique_ptr<Fiber> fiber = std::move(fiber_or).value();
 
   // Allow the fiber to run.
-  fiber->Step();
+  DispatchFiber(reinterpret_cast<std::unique_ptr<Schedulable>*>(&fiber));
 
   // Confirm that the variadic arguments were passed successfully.
   EXPECT_TRUE(executed);
@@ -126,79 +176,66 @@ TEST_F(FiberTest, PerfectlyForwardsVariadicArguments) {
 
   // Confirm that the fiber was marked as dead.
   EXPECT_EQ(fiber->state(), Fiber::State::kDead);
-
-  // Cleanup
-  fiber->~Fiber();
 }
 
 // A Fiber must accurately track its execution state at any given time.
 TEST_F(FiberTest, AccuratelyTracksStateOverLifecycle) {
   auto entry = []() {
-    EXPECT_EQ(Fiber::GetCurrentFiber()->state(), Fiber::State::kRunning);
-    Fiber::GetCurrentFiber()->YieldBack();
-    EXPECT_EQ(Fiber::GetCurrentFiber()->state(), Fiber::State::kRunning);
+    EXPECT_EQ(this_fiber::current_schedulable->state(), Fiber::State::kRunning);
+    this_fiber::yield();
+    EXPECT_EQ(this_fiber::current_schedulable->state(), Fiber::State::kRunning);
   };
 
   auto fiber_or = Fiber::Create(&arena_, entry);
   ASSERT_THAT(fiber_or, IsOk());
-  Fiber* fiber = fiber_or.value();
+  std::unique_ptr<Fiber> fiber = std::move(fiber_or).value();
 
   // Should be suspended at creation
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
   
-  fiber->Step();
+  DispatchFiber(reinterpret_cast<std::unique_ptr<Schedulable>*>(&fiber));
 
   // Should be back to suspended
   EXPECT_EQ(fiber->state(), Fiber::State::kSuspended);
 
   // Jump back in one time to finish the fiber
-  fiber->Step();
+  DispatchFiber(reinterpret_cast<std::unique_ptr<Schedulable>*>(&fiber));
 
   // Confirm that the fiber was marked as dead.
   EXPECT_EQ(fiber->state(), Fiber::State::kDead);
-
-  // Cleanup
-  fiber->~Fiber();
 }
 
-// GetCurrentFiber() should always return an accurate pointer to the currently
-// executing fiber, and should return NULL when not in a fiber.
-TEST_F(FiberTest, GetCurrentFiberReturnsTheCorrectPointer) {
-  Fiber* captured_ptr = nullptr;
+// When running as a schedulable, loom::this_fiber::current_schedulable should
+// be an accurate, owning unique_ptr to the currently executing fiber
+TEST_F(FiberTest, CurrentSchedulableIsAccurate) {
+  Schedulable* captured_ptr = nullptr;
+  Schedulable* main_ptr = nullptr;
 
   auto entry = [&]() {
-    captured_ptr = Fiber::GetCurrentFiber();
+    captured_ptr = this_fiber::current_schedulable.get();
+    main_ptr = main_sch_.get();
   };
 
   // Create two fibers
   auto fiber_a_or = Fiber::Create(&arena_, entry);
   ASSERT_THAT(fiber_a_or, IsOk());
-  Fiber* fiber_a = fiber_a_or.value();
+  std::unique_ptr<Fiber> fiber_a = std::move(fiber_a_or).value();
   
   auto fiber_b_or = Fiber::Create(&arena_, entry);
   ASSERT_THAT(fiber_b_or, IsOk());
-  Fiber* fiber_b = fiber_b_or.value();
-
-  // Make sure it is null to begin with
-  EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
+  std::unique_ptr<Fiber> fiber_b = std::move(fiber_b_or).value();
 
   // Make sure fiber_a is reading the current fiber correctly.
-  fiber_a->Step();
-  EXPECT_EQ(captured_ptr, fiber_a);
+  DispatchFiber(reinterpret_cast<std::unique_ptr<Schedulable>*>(&fiber_a));
+  EXPECT_EQ(captured_ptr, reinterpret_cast<Schedulable*>(fiber_a.get()));
 
-  // Should now be nullptr again
-  EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
+  // Should also be accurate, because we are technically under a schedulable
+  // right now (main_sch_).
+  EXPECT_EQ(this_fiber::current_schedulable.get(), main_ptr);
 
   // Same check for fiber_b
-  fiber_b->Step();
-  EXPECT_EQ(captured_ptr, fiber_b);
-
-  // One last time should be nullptr
-  EXPECT_EQ(Fiber::GetCurrentFiber(), nullptr);
-
-  // Cleanup
-  fiber_a->~Fiber();
-  fiber_b->~Fiber();
+  DispatchFiber(reinterpret_cast<std::unique_ptr<Schedulable>*>(&fiber_b));
+  EXPECT_EQ(captured_ptr, reinterpret_cast<Schedulable*>(fiber_b.get()));
 }
 
 }
