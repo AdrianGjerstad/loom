@@ -66,6 +66,17 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "workstealingdeque",
+    srcs = ["workstealingdeque.cc"],
+    hdrs = ["workstealingdeque.h"],
+    deps = [
+        ":schedulable",
+        "@abseil-cpp//absl/status",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "fiber_test",
     srcs = ["fiber_test.cc"],
@@ -104,5 +115,17 @@ cc_test(
         ":stackswitch",
         "@googletest//:gtest",
     ],
+)
+
+cc_test(
+    name = "workstealingdeque_test",
+    srcs = ["workstealingdeque_test.cc"],
+    deps = [
+        ":schedulable",
+        ":workstealingdeque",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:status_matchers",
+        "@googletest//:gtest",
+    ]
 )
 
