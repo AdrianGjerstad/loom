@@ -63,6 +63,9 @@ class WorkStealingDeque {
   // 2.
   explicit WorkStealingDeque(size_t capacity);
 
+  // Deletes the work that was scheduled.
+  ~WorkStealingDeque();
+
   // Obtains the current number of Work objects in the deque.
   size_t size() const;
 

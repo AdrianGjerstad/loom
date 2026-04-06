@@ -70,6 +70,12 @@ WorkStealingDeque::WorkStealingDeque(size_t capacity)
   tail_.store(0, std::memory_order_relaxed);
 }
 
+WorkStealingDeque::~WorkStealingDeque() {
+  while (Work w = Pop()) {
+    // Allow w to fall out of scope and be deleted.
+  }
+}
+
 size_t WorkStealingDeque::size() const {
   size_t h = head_.load(std::memory_order_relaxed);
   size_t t = tail_.load(std::memory_order_relaxed);
