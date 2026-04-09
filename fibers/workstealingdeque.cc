@@ -27,6 +27,7 @@
 #include <stdint.h>
 
 #include <atomic>
+#include <thread>
 
 #include "absl/status/status.h"
 
@@ -94,7 +95,7 @@ absl::Status WorkStealingDeque::Push(Work work) {
     );
   }
 
-  work_[h & mask_].store(work.release(), std::memory_order_seq_cst);
+  work_[h & mask_].store(work.release(), std::memory_order_relaxed);
   std::atomic_thread_fence(std::memory_order_release);
   head_.store(h + 1, std::memory_order_relaxed);
 
@@ -102,66 +103,71 @@ absl::Status WorkStealingDeque::Push(Work work) {
 }
 
 Work WorkStealingDeque::Pop() {
-  // Greedily take from the head, and only give back if necessary.
-  size_t h = head_.load(std::memory_order_relaxed) - 1;
+  size_t h = head_.load(std::memory_order_relaxed);
+  if (h == 0) return nullptr;
+
+  h -= 1;
   head_.store(h, std::memory_order_relaxed);
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   size_t t = tail_.load(std::memory_order_relaxed);
   if (t > h) {
-    // There was nothing in the queue to begin with
+    // Queue was empty; restore head.
     head_.store(h + 1, std::memory_order_relaxed);
     return nullptr;
   }
 
-  if (t == h) {
-    // Potential data race: another thread could attempt to steal right now and
-    // it would affect this exact same item we're trying to access.
-    if (!tail_.compare_exchange_strong(t, t + 1, std::memory_order_seq_cst,
-                                       std::memory_order_relaxed)) {
-      // Stealing thread won.
-      head_.store(h + 1, std::memory_order_relaxed);
-      return nullptr;
-    }
+  // Extract the work.
+  Schedulable* s = work_[h & mask_].load(std::memory_order_relaxed);
 
-    // We may have won the race, but tail still ended up incremented by 1, which
-    // would mean that without this line, tail would be ahead by 1 and result in
-    // a "size" of -1.
+  if (t == h) {
+    // Competing for the last item with potential stealers.
+    if (!tail_.compare_exchange_strong(t, t + 1, 
+                                       std::memory_order_seq_cst,
+                                       std::memory_order_relaxed)) {
+      // Stealer won.
+      s = nullptr;
+    }
     head_.store(h + 1, std::memory_order_relaxed);
+  } else {
+    // We are safely away from the tail; clear the slot.
+    work_[h & mask_].store(nullptr, std::memory_order_relaxed);
   }
 
-  return Work(work_[h & mask_].load(std::memory_order_seq_cst));
+  return Work(s);
 }
 
-size_t WorkStealingDeque::StealBatch(Batch* output) {
+Work WorkStealingDeque::Steal() {
   size_t t = tail_.load(std::memory_order_acquire);
   std::atomic_thread_fence(std::memory_order_seq_cst);
   size_t h = head_.load(std::memory_order_acquire);
 
-  if (t >= h) {
-    // No work to steal
-    return 0;
-  }
+  if (t >= h) return nullptr;
 
-  // We want to steal half of the work here without being greedy, so its going
-  // to be (h - t) / 2. For example, if there are 5 entries, we would end up
-  // stealing 2 entries.
-  size_t steal_count = (h - t) / 2;
+  // We load the work pointer.
+  Schedulable* s = work_[t & mask_].load(std::memory_order_relaxed);
 
-  if (!tail_.compare_exchange_strong(t, t + steal_count, 
-                                     std::memory_order_seq_cst, 
+  // Attempt to claim this index by moving the tail forward.
+  if (!tail_.compare_exchange_strong(t, t + 1, 
+                                     std::memory_order_seq_cst,
                                      std::memory_order_relaxed)) {
-    // Steal unsuccessful :(
-    return 0;
-  }
-  
-  // Steal successful, stash the goodies and make off like a bandit!
-  for (size_t i = 0; i < steal_count; ++i) {
-    output->emplace_back(work_[(t + i) & mask_].load(
-      std::memory_order_seq_cst));
+    return nullptr; // Lost the race to another stealer or Pop().
   }
 
-  return steal_count;
+  return Work(s);
+}
+
+size_t WorkStealingDeque::StealBatch(Batch* output) {
+  size_t count = 0;
+  size_t max_to_steal = size() / 2;
+  while (count < max_to_steal) {
+    Work work = Steal();
+    if (work == nullptr) break;
+    
+    output->push_back(std::move(work));
+    count++;
+  }
+  return count;
 }
 
 }

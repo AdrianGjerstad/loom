@@ -81,6 +81,11 @@ class WorkStealingDeque {
   // queue. Returns a nullptr if there is no data to pop.
   virtual Work Pop();
 
+  // Steals a single element of work for use in another thread. Has the same
+  // semantics as Pop(), but pops from the tail end of the queue, or the
+  // stealing end.
+  virtual Work Steal();
+
   // Steals half of the work contained in this work-stealing queue and places it
   // with no particular guarantee as to order in the given vector. Output vector
   // is only appended to, so work that was already in the vector is preserved.

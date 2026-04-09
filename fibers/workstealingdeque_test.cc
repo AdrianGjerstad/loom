@@ -155,6 +155,8 @@ TEST_F(WorkStealingDequeTest, ConcurrencyStressTest) {
     // Schedulable is destructed by falling out of scope here
   };
 
+  std::cerr << "Setup complete" << std::endl;
+
   // Start stealing threads
   std::vector<std::thread> stealers;
   for (int i = 0; i < kNumStealers; ++i) {
@@ -173,6 +175,8 @@ TEST_F(WorkStealingDequeTest, ConcurrencyStressTest) {
     });
   }
 
+  std::cerr << "Threads started" << std::endl;
+
   // Owner of the deque pushes and occasionally pops data to "run" itself
   for (int i = 0; i < kNumItems; ++i) {
     while (!large_deque.Push(MakeWork(i)).ok()) {
@@ -185,6 +189,8 @@ TEST_F(WorkStealingDequeTest, ConcurrencyStressTest) {
     }
   }
 
+  std::cerr << "All elements pushed" << std::endl;
+
   // All items have been "scheduled"
   done.store(true);
 
@@ -192,6 +198,8 @@ TEST_F(WorkStealingDequeTest, ConcurrencyStressTest) {
   for (auto& t : stealers) {
     t.join();
   }
+
+  std::cerr << "All threads joined" << std::endl;
 
   // Drain all remaining data
   while (std::unique_ptr<Schedulable> w = large_deque.Pop()) {

@@ -69,8 +69,19 @@ class FakeWorkStealingDeque : public WorkStealingDeque {
 
   // Maintains stack-like behavior of the real thing.
   Work Pop() override {
+    if (work_.empty()) return nullptr;
+
     Work work = std::move(work_.back());
     work_.pop_back();
+
+    return work;
+  }
+
+  Work Steal() override {
+    if (work_.empty()) return nullptr;
+
+    Work work = std::move(work_.front());
+    work_.pop_front();
 
     return work;
   }
