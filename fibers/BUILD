@@ -35,6 +35,18 @@ cc_library(
 )
 
 cc_library(
+    name = "globalworkqueue",
+    srcs = ["globalworkqueue.cc"],
+    hdrs = ["globalworkqueue.h"],
+    deps = [
+        ":schedulable",
+        ":workstealingdeque",
+        "@abseil-cpp//absl/synchronization",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "schedulable",
     srcs = ["schedulable.cc"],
     hdrs = ["schedulable.h"],
@@ -88,6 +100,18 @@ cc_test(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/status:status_matchers",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "globalworkqueue_test",
+    srcs = ["globalworkqueue_test.cc"],
+    deps = [
+        ":globalworkqueue",
+        ":schedulable",
+        ":workstealingdeque",
+        "@abseil-cpp//absl/status",
         "@googletest//:gtest",
     ],
 )

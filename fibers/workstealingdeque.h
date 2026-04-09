@@ -56,6 +56,10 @@ class WorkStealingDeque {
   // by any means an atomic operation.
   typedef std::unique_ptr<Schedulable> Work;
 
+  // A "batch" of work is just a collection of Schedulables that behaves like a
+  // vector (and below is defined as a vector).
+  typedef std::vector<Work> Batch;
+
   // Creates a deque with a default capacity of 32.
   WorkStealingDeque() : WorkStealingDeque(32) {}
 
@@ -64,18 +68,18 @@ class WorkStealingDeque {
   explicit WorkStealingDeque(size_t capacity);
 
   // Deletes the work that was scheduled.
-  ~WorkStealingDeque();
+  virtual ~WorkStealingDeque();
 
   // Obtains the current number of Work objects in the deque.
-  size_t size() const;
+  virtual size_t size() const;
 
   // From the perspective of the local-thread ONLY, pushes some work onto the
   // queue. Fails if there is no more room on the queue for work to go.
-  absl::Status Push(Work work);
+  virtual absl::Status Push(Work work);
 
   // From the perspective of the local-thread ONLY, pops some work from the
   // queue. Returns a nullptr if there is no data to pop.
-  Work Pop();
+  virtual Work Pop();
 
   // Steals half of the work contained in this work-stealing queue and places it
   // with no particular guarantee as to order in the given vector. Output vector
@@ -89,7 +93,7 @@ class WorkStealingDeque {
   //   batch of work to start crunching through.
   //
   // The work stolen is the oldest half of the work in the queue.
-  size_t StealBatch(std::vector<Work>* output);
+  virtual size_t StealBatch(Batch* output);
 
  private:
   // A bitmask that allows for efficient

@@ -27,7 +27,6 @@
 #include <stdint.h>
 
 #include <atomic>
-#include <vector>
 
 #include "absl/status/status.h"
 
@@ -57,6 +56,7 @@ size_t bit_ceil(size_t x) {
 }
 
 typedef WorkStealingDeque::Work Work;
+typedef WorkStealingDeque::Batch Batch;
 
 }
 
@@ -133,7 +133,7 @@ Work WorkStealingDeque::Pop() {
   return Work(work_[h & mask_].load(std::memory_order_seq_cst));
 }
 
-size_t WorkStealingDeque::StealBatch(std::vector<Work>* output) {
+size_t WorkStealingDeque::StealBatch(Batch* output) {
   size_t t = tail_.load(std::memory_order_acquire);
   std::atomic_thread_fence(std::memory_order_seq_cst);
   size_t h = head_.load(std::memory_order_acquire);
